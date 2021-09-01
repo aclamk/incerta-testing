@@ -21,7 +21,7 @@ OUTDIR=${TESTDIR}/${TEST}
 TEST_SPACE=${TEST_SPACE:-"--size=150000M --nrfiles=37500"}
 
 #define iorange. fio makes size distribution in pareto distribution
-IOSIZE=${IOSIZE:-"--bsrange 4k-64k"}
+IOSIZE=${IOSIZE:-"--bssplit=4k/16:8k/10:12k/9:16k/8:20k/7:24k/7:28k/6:32k/6:36k/5:40k/5:44k/4:48k/4:52k/4:56k/3:60k/3:64k/3"}
 
 #blob size, only used at deploy
 BLOB_SIZE=${BLOB_SIZE:-65536}
@@ -42,6 +42,7 @@ export FIO=${FIO:-$(which fio)}
 
 #/home/akupczyk/adam/fio-pareto/fio
 FIO_ARGS="--ioengine=rados --pool=test_pool --invalidate=0 \
+	--touch_objects=0 \
 	--output-format=json,normal \
 	--group_reporting \
 	--randrepeat=0 \
@@ -72,6 +73,7 @@ function cluster_deploy() {
 	-o bluestore_block_path=/dev/disk/by-partlabel/osd-device-\$id-block    \
         -o bluestore_block_db_path=/dev/disk/by-partlabel/osd-device-\$id-db    \
         -o bluestore_block_wal_path=/dev/disk/by-partlabel/osd-device-\$id-wal \
+        -o bluestore_block_wal_size=10G \
 	-o osd_memory_target=${OSD_MEMORY} \
 	-o bluestore_max_blob_size=${BLOB_SIZE} \
         ${EXTRA_DEPLOY_OPTIONS}
@@ -81,12 +83,13 @@ function cluster_deploy() {
   echo === pinning ===
   ps -U $(whoami) -o "%p %c" |grep ceph-osd | cut -f 1 -d c |
   { 
-    read o0
-    taskset -apc 0-$((0 + NUMCPU - 1)) ${o0}
-    read o1
-    taskset -apc 10-$((10 + NUMCPU - 1)) ${o1}
-    read o2
-    taskset -apc 20-$((20 + NUMCPU - 1)) ${o2}
+    #read o0
+    #taskset -apc 0-$((0 + NUMCPU - 1)) ${o0}
+    #read o1
+    #taskset -apc 10-$((10 + NUMCPU - 1)) ${o1}
+    #read o2
+    #taskset -apc 20-$((20 + NUMCPU - 1)) ${o2}
+    true
   }
   sleep 3
   echo === setup ===
@@ -95,7 +98,8 @@ function cluster_deploy() {
   ./bin/ceph osd pool set test_pool compression_mode ${COMPRESS_MODE}
   ./bin/ceph osd pool set test_pool compression_max_blob_size ${BLOB_SIZE}
   ./bin/ceph osd pool set test_pool compression_min_blob_size ${BLOB_SIZE}
-
+  #FIO needs dirs to actually exist
+  mkdir -p g0 g1 g2 g3
 }
 
 
