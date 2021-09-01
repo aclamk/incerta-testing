@@ -1,5 +1,11 @@
 #!/bin/bash
-
+if [[ x$1 != x ]]
+then
+  cd $1
+  ../report.sh
+  cd ..
+  exit
+fi
 
 function sum() {
   A="$*"
